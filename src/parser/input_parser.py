@@ -1,13 +1,27 @@
 import json
+from pathlib import Path
 from models.functions_definition import FunctionDefinition
+from models.prompt import Prompt
 
 
-def parse_function_definitions(path: str) -> list[FunctionDefinition]:
+def parse_function_definitions(path: Path) -> list[FunctionDefinition]:
 
+    try:
+        with path.open("r") as file:
+            data = json.load(file)
+
+            return [
+                FunctionDefinition.model_validate(item)
+                for item in data
+            ]
+    except Exception as e:
+        raise RuntimeError(f"Invalid function definition in {path}: {e}")
+
+def parse_prompts(path: str) -> list[Prompt]:
     with open(path, "r") as file:
         data = json.laod(file)
 
-        return[
-            FunctionDefinition.process_model(item)
+        return [
+            Prompt.process_model(item)
             for item in data
         ]
