@@ -71,6 +71,33 @@ class TokenFilterEngine:
 
         return []
 
+    def decode(self, prompt: str):
+        generated_token = self.llm.encode(prompt).squeeze().tolist()
+
+        if isinstance(generated_token, int):
+            generated_token = [generated_token]
+
+        while not self.state_machine.is_done():
+            logits = self.llm.get_logits_from_input_ids(generated_token)
+            allowed = self.allowed_tokens()
+            masked_logits = [
+                float("-inf")
+            ] * len(logits)
+
+            for token in allowed:
+                masked_logits[token] = logits[token]
+
+            next_token = max(
+                range(len(masked_logits)),
+                key=lambda i: masked_logits[i]
+            )
+
+            generated_token.append(next_token)
+
+            self.advance_sequence()
+
+        return self.llm.decode(generated_token)
+        
     def _get_parameter_value_tokens(self) -> list[int]:
         parameter_type = self.state_machine.current_parameter_type()
 
