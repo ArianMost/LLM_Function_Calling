@@ -11,8 +11,70 @@ class TokenFilterEngine:
     ) -> None:
         self.state_machine = state_machine
         self.llm = llm
+        self.current_sequence: list[int] = []
+        self.sequence_position: int = 0
 
     def allowed_tokens(self) -> list[int]:
+        if self.state_machine.current_state == State.PARAMETER_COLON:
+            return self._dynamic_allowed_tokens()
+
+        if not self.current_sequence:
+            self.current_sequence = self._build_current_sequence()
+            self.sequence_position = 0
+
+            if not self.current_sequence:
+                raise RuntimeError(
+                    f"No valid token sequence for state "
+                    f"{self.state_machine.current_state}"
+                )
+
+        return [self.current_sequence[self.sequence_position]]
+
+    # def advance_sequence(self) -> None:
+    #     self.sequence_position += 1
+
+    #     if self.sequence_position >= len(self.current_sequence):
+    #         self.current_sequence = []
+    #         self.sequence_position = 0
+    #         self.state_machine.move_forward()
+
+    def consume_generated_token(
+        self,
+        token: int,
+    ) -> None:
+        if self.current_sequence:
+            self.sequence_position += 1
+
+            if self.sequence_position >= len(self.current_sequence):
+                self.current_sequence = []
+                self.sequence_position = 0
+                self.state_machine.move_forward()
+            return
+
+        if self.state_machine.current_state == State.PARAMETER_COLON:
+            self._consume_parameter_value(token)
+
+    def _consume_parameter_value(
+        self,
+        token: int,
+    ) -> None:
+        parameter_type = self.state_machine.current_parameter_type()
+
+        if parameter_type == "boolean":
+            self.state_machine.move_forward()
+            return
+
+        if parameter_type == "number":
+            # TODO: Needs more implementation.
+            self.state_machine.move_forward()
+            return
+
+        if parameter_type == "string":
+            # TODO: Needs more implementation.
+            self.state_machine.move_forward()
+            return
+
+    def _build_current_sequence(self) -> list[int]:
         state = self.state_machine.current_state
         function_name = self.state_machine.function_definition.name
         current_parameter = self.state_machine.current_parameter()
@@ -49,7 +111,8 @@ class TokenFilterEngine:
                 return self._extract_token_code(":")
 
             case State.PARAMETER_COLON:
-                return self._get_parameter_value_tokens()
+                # Parameter values are handled dynamically
+                return []
 
             case State.PARAMETER_VALUE:
                 if self.state_machine.has_more_parameters():
@@ -64,41 +127,14 @@ class TokenFilterEngine:
                 return self._extract_token_code("}")
 
             case State.CLOSE_ROOT_OBJECT:
-                return []
+                return self._extract_token_code("}")
 
             case State.DONE:
                 return []
 
         return []
 
-    def decode(self, prompt: str):
-        generated_token = self.llm.encode(prompt).squeeze().tolist()
-
-        if isinstance(generated_token, int):
-            generated_token = [generated_token]
-
-        while not self.state_machine.is_done():
-            logits = self.llm.get_logits_from_input_ids(generated_token)
-            allowed = self.allowed_tokens()
-            masked_logits = [
-                float("-inf")
-            ] * len(logits)
-
-            for token in allowed:
-                masked_logits[token] = logits[token]
-
-            next_token = max(
-                range(len(masked_logits)),
-                key=lambda i: masked_logits[i]
-            )
-
-            generated_token.append(next_token)
-
-            self.advance_sequence()
-
-        return self.llm.decode(generated_token)
-        
-    def _get_parameter_value_tokens(self) -> list[int]:
+    def _dynamic_allowed_tokens(self) -> list[int]:
         parameter_type = self.state_machine.current_parameter_type()
 
         if parameter_type == "boolean":
@@ -126,6 +162,7 @@ class TokenFilterEngine:
         )
 
     def _extract_token_code(self, text: str) -> list[int]:
+        # Converts grammar symbol to token ids
         tokens = self.llm.encode(text).squeeze().tolist()
         if isinstance(tokens, int):
             return [tokens]
