@@ -1,5 +1,5 @@
 from llm_sdk import Small_LLM_Model
-from models.functions_definition import FunctionDefinition
+from ..models.functions_definition import FunctionDefinition
 
 
 class FunctionSelector:
