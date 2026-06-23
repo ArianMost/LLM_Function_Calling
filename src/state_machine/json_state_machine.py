@@ -1,5 +1,5 @@
-from models.functions_definition import FunctionDefinition
-from state_machine.states import State
+from ..models.functions_definition import FunctionDefinition
+from ..state_machine.states import State
 
 
 class JSONStateMachine:
@@ -46,7 +46,6 @@ class JSONStateMachine:
                 self.current_state = State.PARAMETER_VALUE
 
             case State.PARAMETER_VALUE:
-
                 if self.has_more_parameters():
                     self.current_state = State.PARAMETER_COMMA
                 else:
