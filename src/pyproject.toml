@@ -1,0 +1,30 @@
+[project]
+name = "call-me-maybe"
+version = "0.1.0"
+description = "Call me maybe - Introduction to function calling in LLMs"
+readme = "README.md"
+requires-python = ">=3.10"
+
+dependencies = [
+    "pydantic>=2.11.9",
+    "numpy>=1.26",
+    "flake8>=7.0",
+    "mypy>=1.0",
+    "torch>=2.0.0",
+    "transformers>=4.40.0",
+    "huggingface-hub>=0.20.0",
+    "llm_sdk",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[dependency-groups]
+dev = ["flake8>=7.0", "mypy>=1.0"]
+
+[tool.uv.sources]
+llm_sdk = { path = "./llm_sdk", editable = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
