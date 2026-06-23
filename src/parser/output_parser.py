@@ -1,7 +1,7 @@
 import json
 from typing import Any
-from models.function_call import FunctionCall
-from models.functions_definition import FunctionDefinition, ParameterType
+from ..models.function_call import FunctionCall
+from ..models.functions_definition import FunctionDefinition, ParameterType
 
 def parse_output(
         prompt: str,
